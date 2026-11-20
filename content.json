@@ -1,0 +1,257 @@
+{
+  "texts": {
+    "kicker-0": "COMPUTER SCIENCE AT UNIVERSITI TEKNOLOGI PETRONAS",
+    "bio-0": "Final-year Computer Science student with a finance minor. I build machine learning systems, IoT pipelines and apps, mostly in Python, Flutter and React.",
+    "stat-l-0": "projects shipped or in progress",
+    "stat-n-1": "0",
+    "stat-l-1": "hackathons & data competitions",
+    "stat-n-2": "Top 5",
+    "stat-l-2": "ExxonMobil DataWorks 2026 finalist",
+    "stat-n-3": "0",
+    "stat-l-3": "stacks: Python, Flutter, React",
+    "about-about-p-0": "I'm a Computer Science student at Universiti Teknologi PETRONAS (UTP) in my final year, with a minor in finance. Most of what I build sits where data meets real-world problems: machines, money, air quality, everyday life.",
+    "about-about-p-1": "My final year project is an IoT predictive maintenance system for oil & gas equipment. It goes from an ESP32 vibration sensor all the way to an explainable ML model and a live dashboard. Outside class I join hackathons and data competitions, and I build small apps for the people around me.",
+    "about-about-p-2": "I like projects that actually get used, even if the users are just my housemates.",
+    "tl-item-d-0": "NOV 2026",
+    "tl-item-h4-0": "4th runner-up at the ExxonMobil DataWorks Challenge",
+    "tl-item-p-0": "Team 4Beans (UTP) reached the top 5 finals for ML-assisted history matching and production forecasting.",
+    "tl-item-d-1": "OCT 2026",
+    "tl-item-h4-1": "Hackathon month",
+    "tl-item-p-1": "Shipped Fulfil, GapHelp, FreePeriod and GameSense across four Devpost hackathons.",
+    "tl-item-d-2": "SEP 2026",
+    "tl-item-h4-2": "FYP goes physical",
+    "tl-item-p-2": "Started collecting Normal / Degraded / Fault vibration data from a lathe with ESP32 + MQTT, live into the Flask dashboard.",
+    "tl-item-d-3": "JUL 2026",
+    "tl-item-h4-3": "FYP 1 interim report done",
+    "tl-item-p-3": "CRISP-DM framework, algorithm comparison and SHAP explainability, with all examiner feedback addressed.",
+    "tl-item-d-4": "MAY 2026",
+    "tl-item-h4-4": "Picked my FYP",
+    "tl-item-p-4": "IoT-based predictive maintenance for oil & gas equipment, validated on the CWRU bearing dataset.",
+    "contact-contact-div-first-child-p-0": "Want to team up for a hackathon, talk ML, or see a project up close?",
+    "contact-contact-div-first-child-p-1": "Best way to reach me is below. I usually reply within a day or two (probably with headphones on 🎧)."
+  },
+  "contact": {
+    "github": "github.com/barzj04",
+    "email": "arleenchong@gmail.com",
+    "linkedin": "www.linkedin.com/in/arleenchong",
+    "location": "Malaysia"
+  },
+  "projects": [
+    {
+      "id": "fyp",
+      "title": "IoT Predictive Maintenance System",
+      "category": "ML & IoT",
+      "status": "wip",
+      "year": "2026",
+      "ctx": "Final Year Project, UTP",
+      "desc": "Predicts faults in industrial rotating equipment for the oil & gas industry. ESP32 + MPU-6050 stream vibration data over MQTT into a Python ML pipeline, shown on a Flask dashboard with Operator and Engineer views.",
+      "impact": "Works end to end, from live sensor to dashboard",
+      "tags": [
+        "Python",
+        "Random Forest",
+        "Isolation Forest",
+        "SHAP",
+        "Flask",
+        "ESP32",
+        "MQTT"
+      ]
+    },
+    {
+      "id": "dataworks",
+      "title": "ExxonMobil DataWorks Challenge 2026",
+      "category": "Competitions",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Team 4Beans, UTP",
+      "desc": "ML-assisted history matching and production forecasting for oil & gas reservoirs. Came in new to the domain and learned it during the competition.",
+      "impact": "Top 5 finalist, 4th runner-up",
+      "tags": [
+        "Python",
+        "Machine Learning",
+        "Forecasting"
+      ]
+    },
+    {
+      "id": "pm25",
+      "title": "Explainable PM2.5 Prediction",
+      "category": "ML & IoT",
+      "status": "wip",
+      "year": "2026",
+      "ctx": "TEB3123 Machine Learning, 5-person team",
+      "desc": "Next-hour PM2.5 prediction and air quality category classification for Europe, using about 10 years (2016 to 2026) of OpenAQ multi-pollutant sensor data plus temperature and humidity.",
+      "impact": "Sustainability-focused, explainable ML",
+      "tags": [
+        "Python",
+        "OpenAQ",
+        "Classification",
+        "Regression"
+      ]
+    },
+    {
+      "id": "gamesense",
+      "title": "GameSense",
+      "category": "Hackathons",
+      "status": "done",
+      "year": "2026",
+      "ctx": "AQX Sports Analytics Data Bowl 4.0",
+      "desc": "Open-source football (soccer) analytics project built for a sports data competition on Devpost.",
+      "impact": "Pivoted from an F1 pit-strategy idea to football",
+      "tags": [
+        "Python",
+        "Sports Analytics",
+        "Open Source"
+      ]
+    },
+    {
+      "id": "fulfil",
+      "title": "Fulfil",
+      "category": "Hackathons",
+      "status": "done",
+      "year": "2026",
+      "ctx": "NextSpark Hacks, with Lester",
+      "desc": "A fitness and nutrition app against crash dieting, with AI meal logging. I wrote the code; Lester did UI/UX and the demo video.",
+      "impact": "Shipped as a Flutter web demo",
+      "tags": [
+        "Flutter",
+        "Dart",
+        "AI"
+      ],
+      "repo": "https://github.com/barzj04/fulfil"
+    },
+    {
+      "id": "gaphelp",
+      "title": "GapHelp",
+      "category": "Hackathons",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Taskforge Hackathon, team A + L",
+      "desc": "Breaks tasks into small steps and fits them into the gap before your next event, with a 'leave now' alarm so you're never late. Started as a Chrome extension called Save Point.",
+      "impact": "Idea + full code by me",
+      "tags": [
+        "Web App",
+        "JavaScript",
+        "Productivity"
+      ]
+    },
+    {
+      "id": "freeperiod",
+      "title": "FreePeriod",
+      "category": "Hackathons",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Glitchathon (Build with AI theme)",
+      "desc": "An AI-first version of GapHelp, rebuilt for an AI-themed hackathon.",
+      "impact": "More AI in the task planning",
+      "tags": [
+        "AI",
+        "Web App"
+      ]
+    },
+    {
+      "id": "eagle",
+      "title": "Entrepreneur Eagle Companion",
+      "category": "Hackathons",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Codefest, Track 5: Financial Inclusion",
+      "desc": "Finance companion for SMEs: financial projection, grant matching, document vault and cash-flow tracking. A teammate built the app (Woodpecker); I built the pitch deck.",
+      "impact": "My role: pitch & product story",
+      "tags": [
+        "FinTech",
+        "Pitch Deck",
+        "SMEs"
+      ]
+    },
+    {
+      "id": "runi",
+      "title": "RUni",
+      "category": "Personal Apps",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Built for my housemate and me",
+      "desc": "Shared household management app with real-time data for two users.",
+      "impact": "Deployed and used daily",
+      "tags": [
+        "React",
+        "Supabase",
+        "Vercel"
+      ],
+      "live": "https://runi-xi.vercel.app"
+    },
+    {
+      "id": "splitter",
+      "title": "Bill Splitter",
+      "category": "Personal Apps",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Built for 4 friends",
+      "desc": "Web app for four friends to split bills, with real-time sync so everyone sees the same balances.",
+      "impact": "Real-time sync, hosted on GitHub Pages",
+      "tags": [
+        "JavaScript",
+        "Supabase",
+        "GitHub Pages"
+      ]
+    },
+    {
+      "id": "kitchen",
+      "title": "Kitchen Co-op",
+      "category": "Personal Apps",
+      "status": "done",
+      "year": "2026",
+      "ctx": "Roommate coordination",
+      "desc": "Streamlit app that helps roommates coordinate kitchen duties and shared stuff.",
+      "impact": "Python-only full-stack app",
+      "tags": [
+        "Streamlit",
+        "Python",
+        "Supabase"
+      ]
+    },
+    {
+      "id": "jaku",
+      "title": "Jaku",
+      "category": "Personal Apps",
+      "status": "wip",
+      "year": "2026",
+      "ctx": "Language learning",
+      "desc": "A Duolingo-style app for indigenous languages of Sabah and Sarawak, starting with Iban.",
+      "impact": "Language preservation",
+      "tags": [
+        "Flutter",
+        "Dart",
+        "Supabase"
+      ]
+    },
+    {
+      "id": "bucket",
+      "title": "BUCKET LA",
+      "category": "Personal Apps",
+      "status": "wip",
+      "year": "2026",
+      "ctx": "Couples app",
+      "desc": "A Flutter app for couples to plan and track things to do together.",
+      "impact": "",
+      "tags": [
+        "Flutter",
+        "Dart"
+      ]
+    },
+    {
+      "id": "duetify",
+      "title": "Duetify",
+      "category": "Personal Apps",
+      "status": "plan",
+      "year": "2026",
+      "ctx": "Music × AI",
+      "desc": "Turns audio or a YouTube link into sheet music for piano and violin duets, with combined and per-instrument sheets.",
+      "impact": "Free sheet music for duet players",
+      "tags": [
+        "AI",
+        "Audio",
+        "Web"
+      ]
+    }
+  ],
+  "updatedAt": "2026-11-20T08:42:02.902Z"
+}
