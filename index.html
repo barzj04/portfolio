@@ -215,6 +215,22 @@ footer{padding:96px 0 40px;font-size:14px;color:var(--subtle);text-align:center;
 .gbtn{font:700 12.5px var(--sans);padding:4px 10px;border-radius:10px;border:var(--b);background:var(--card);color:var(--text);cursor:pointer}
 .gbtn:hover{background:var(--bg2)}
 .card .del{z-index:3}
+
+.admin-link{color:var(--subtle);font-weight:600;margin-left:8px;opacity:.6;text-decoration:none}
+.admin-link:hover{opacity:1;text-decoration:underline}
+.edtools{position:absolute;top:28px;right:28px;z-index:4;display:none;gap:6px}
+.editing .edtools{display:flex}
+.edbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--card);border:var(--b);border-radius:var(--r);padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(0,0,0,.15);font-weight:700;font-size:14px;color:var(--muted);max-width:calc(100vw - 24px)}
+.edbar .btn{height:38px;padding:0 14px;font-size:14px}
+.editing .edbar{display:flex}
+.editing .fab{display:none!important}
+.editing [contenteditable]{outline:1.5px dashed var(--line2);outline-offset:4px;border-radius:6px;cursor:text}
+.editing [contenteditable]:hover{outline-color:var(--acc)}
+.editing [contenteditable]:focus{outline:2px solid var(--acc)}
+.lhelp{font-size:14px;color:var(--muted);line-height:1.55}
+.chk{display:flex!important;align-items:center;gap:8px;font-size:13.5px}
+.chk input{width:auto}
+.editing footer{padding-bottom:120px}
 </style>
 </head>
 <body>
@@ -409,7 +425,7 @@ footer{padding:96px 0 40px;font-size:14px;color:var(--subtle);text-align:center;
   </section>
 </main>
 
-<footer>© <span id="yr"></span> arleen. made with ♡ and good music</footer>
+<footer>© <span id="yr"></span> arleen. made with ♡ and good music <a href="#" id="adminLink" class="admin-link">admin</a></footer>
 
 <button class="fab" id="fab" aria-label="Add a project"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>add project</button>
 
@@ -434,11 +450,29 @@ footer{padding:96px 0 40px;font-size:14px;color:var(--subtle);text-align:center;
       <label>live / demo link<input name="live" placeholder="https://..."></label>
     </div>
     <label>Photos (you can pick several, first one is the thumbnail)<input type="file" name="photos" accept="image/*" multiple></label>
+    <label id="clearWrap" class="chk" hidden><input type="checkbox" name="clearPhotos"> remove this project's current photos</label>
     <div class="err" id="formErr"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button type="button" class="btn ghost" id="cancel">cancel</button>
       <button type="submit" class="btn primary" id="saveBtn">save</button>
     </div>
+  </form>
+</div>
+
+<div class="edbar" role="toolbar" aria-label="Edit tools">
+  <span>✎ edit mode: click any text to change it</span>
+  <button class="btn ghost" id="edAdd">+ add project</button>
+  <button class="btn primary" id="edSave">save changes</button>
+  <button class="btn ghost" id="edExit">done</button>
+  <button class="btn ghost" id="edLogout">log out</button>
+</div>
+<div class="modal" id="login" role="dialog" aria-modal="true" aria-labelledby="lTitle">
+  <form id="loginForm" novalidate>
+    <h3 id="lTitle">admin login</h3>
+    <p class="lhelp">Paste a GitHub token that can edit this site's repo. Make one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>: pick <b>Only select repositories</b> and choose this repo, then under <b>Repository permissions</b> set <b>Contents</b> to <b>Read and write</b>. It's saved only in this browser.</p>
+    <label>GitHub token<input id="tokenIn" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_..."></label>
+    <div class="err" id="loginErr"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn ghost" id="loginCancel">cancel</button><button type="submit" class="btn primary">log in</button></div>
   </form>
 </div>
 <div class="toast" id="toast"></div>
@@ -492,37 +526,48 @@ const BUILTIN = [
 const BASE_CATS = ["ML & IoT","Competitions","Hackathons","Personal Apps"];
 const STATUS = {done:["shipped","st-done"],wip:["in progress","st-wip"],plan:["planned","st-plan"]};
 
-let custom = [], activeCat = "All", query = "", db = null, isOwner = false;
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const safeUrl = u => /^https?:\/\//i.test(u||"") ? u : "";
+let activeCat="All", query="", content={texts:{},contact:{},projects:null}, editing=false, token=null, previews={};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl=u=>/^https?:\/\//i.test(u||"")?u:"";
+const GH=(()=>{const h=location.hostname, seg=location.pathname.split("/").filter(Boolean)[0];
+  return {owner:h.endsWith(".github.io")?h.split(".")[0]:"barzj04", repo:(h.endsWith(".github.io")&&seg&&!seg.includes("."))?seg:"portfolio", branch:"main"};})();
 
-function all(){ return [...custom, ...BUILTIN]; }
-function cats(){ const s = new Set(BASE_CATS); all().forEach(p=>p.category&&s.add(p.category)); return [...s]; }
+function all(){return content.projects||BUILTIN;}
+function cats(){const s=new Set(BASE_CATS);all().forEach(p=>p.category&&s.add(p.category));return [...s];}
 
+/* ---------- projects ---------- */
 function renderTabs(){
-  const list = all();
-  const html = ["All",...cats()].map(c=>{
-    const n = c==="All"?list.length:list.filter(p=>p.category===c).length;
-    return `<button class="tab ${c===activeCat?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="ct">${n}</span></button>`;
-  }).join("") + `<input class="search" id="q" placeholder="search projects…" value="${esc(query)}" aria-label="Search projects">`;
-  $("#tabs").innerHTML = html;
+  const list=all();
+  $("#tabs").innerHTML=["All",...cats()].map(c=>{const n=c==="All"?list.length:list.filter(p=>p.category===c).length;
+    return `<button class="tab ${c===activeCat?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="ct">${n}</span></button>`;}).join("")
+    +`<input class="search" id="q" placeholder="search projects…" value="${esc(query)}" aria-label="Search projects">`;
   $("#tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{activeCat=b.dataset.cat;renderTabs();renderGrid();});
-  const q=$("#q"); q.oninput=()=>{query=q.value;renderGrid();};
-  if(document.activeElement===null||document.activeElement===document.body){}
-  $("#statProjects").dataset.count = list.length;
-  $("#statProjects").textContent = list.length;
+  const q=$("#q");q.oninput=()=>{query=q.value;renderGrid();};
+  $("#statProjects").dataset.count=list.length;$("#statProjects").textContent=list.length;
+}
+const PH_COUNT=3;
+const IMG_ICON='<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>';
+const imgSrc=p=>previews[p]||p;
+function gallery(p){
+  const imgs=(p.images||[]).filter(Boolean);
+  const slides=imgs.length?imgs.map((src,i)=>`<div class="slide"><img src="${esc(imgSrc(src))}" alt="${esc(p.title)} picture ${i+1}" loading="lazy"></div>`)
+    :Array.from({length:PH_COUNT},(_,i)=>`<div class="slide ph"><span class="ic">${IMG_ICON}</span><span class="phl">screenshot ${i+1} of ${PH_COUNT}</span><span class="phs">coming soon</span></div>`);
+  const n=slides.length;
+  return `<div class="gal"><div class="track" tabindex="0" aria-label="${esc(p.title)} pictures">${slides.join("")}</div>
+    ${n>1?`<button class="gnav prev" aria-label="Previous picture"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+    <button class="gnav next" aria-label="Next picture"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+    <div class="dots">${Array.from({length:n},(_,i)=>`<i class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>`;
 }
 function renderGrid(){
-  const q = query.trim().toLowerCase();
-  const items = all().filter(p=>(activeCat==="All"||p.category===activeCat) &&
-    (!q || [p.title,p.desc,p.ctx,(p.tags||[]).join(" ")].join(" ").toLowerCase().includes(q)));
-  $("#projCount").textContent = `${items.length} result${items.length===1?"":"s"}`;
-  if(!items.length){ $("#grid").innerHTML = `<div class="empty">nothing here yet ♪</div>`; return; }
-  $("#grid").innerHTML = items.map(p=>{
-    const st = STATUS[p.status]||STATUS.done, repo=safeUrl(p.repo), live=safeUrl(p.live);
-    return `<article class="card rv ${p._custom?"custom":""}">
-      ${p._custom?`<button class="iconbtn del" data-id="${esc(p.id)}" title="Remove" aria-label="Remove project">✕</button>`:""}
+  const q=query.trim().toLowerCase();
+  const items=all().filter(p=>(activeCat==="All"||p.category===activeCat)&&(!q||[p.title,p.desc,p.ctx,(p.tags||[]).join(" ")].join(" ").toLowerCase().includes(q)));
+  $("#projCount").textContent=`${items.length} result${items.length===1?"":"s"}`;
+  if(!items.length){$("#grid").innerHTML=`<div class="empty">nothing here yet ♪</div>`;return;}
+  $("#grid").innerHTML=items.map(p=>{
+    const st=STATUS[p.status]||STATUS.done,repo=safeUrl(p.repo),live=safeUrl(p.live);
+    return `<article class="card rv">
+      <div class="edtools"><button class="gbtn" data-edit-p="${esc(p.id)}">edit</button><button class="gbtn" data-del-p="${esc(p.id)}">delete</button></div>
       ${gallery(p)}
       <div class="top"><span class="cat">#${esc(p.category)}${p.year?`<span class="yr">${esc(p.year)}</span>`:""}</span><span class="status ${st[1]}">${st[0]}</span></div>
       <h3>${esc(p.title)}</h3>
@@ -532,31 +577,14 @@ function renderGrid(){
       ${(repo||live)?`<div class="lnk">${repo?`<a href="${esc(repo)}">repo ↗</a>`:""}${live?`<a href="${esc(live)}">live ↗</a>`:""}</div>`:""}
       <div class="tags">${(p.tags||[]).map(t=>`<span>${esc(t)}</span>`).join("")}</div>
     </article>`;}).join("");
-  $("#grid").querySelectorAll(".del").forEach(b=>b.onclick=()=>removeProject(b.dataset.id));
+  $("#grid").querySelectorAll("[data-edit-p]").forEach(b=>b.onclick=()=>openModal(b.dataset.editP));
+  $("#grid").querySelectorAll("[data-del-p]").forEach(b=>b.onclick=()=>removeProject(b.dataset.delP));
   wireGalleries();
   if(window.__io) document.querySelectorAll(".card.rv:not(.in)").forEach(el=>window.__io.observe(el));
 }
-
-/* ---------- project photo galleries ---------- */
-let media = {}, assets = null;
-const PH_COUNT = 3;
-const IMG_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>';
-function gallery(p){
-  const ids = (media[p.id]?.ids)||[];
-  const slides = ids.length
-    ? ids.map((id,i)=>`<div class="slide"><img src="/_blob/${encodeURIComponent(id)}" alt="${esc(p.title)} screenshot ${i+1}" loading="lazy"></div>`)
-    : Array.from({length:PH_COUNT},(_,i)=>`<div class="slide ph"><span class="ic">${IMG_ICON}</span><span class="phl">screenshot ${i+1} of ${PH_COUNT}</span><span class="phs">coming soon</span></div>`);
-  const n = slides.length;
-  return `<div class="gal" data-pid="${esc(p.id)}" data-n="${n}">
-    <div class="track" tabindex="0" aria-label="${esc(p.title)} pictures">${slides.join("")}</div>
-    ${n>1?`<button class="gnav prev" aria-label="Previous picture"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
-    <button class="gnav next" aria-label="Next picture"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
-    <div class="dots">${Array.from({length:n},(_,i)=>`<i class="${i?"":"on"}"></i>`).join("")}</div>`:""}
-  </div>`;
-}
 function wireGalleries(){
   document.querySelectorAll(".gal").forEach(g=>{
-    const t=g.querySelector(".track"), dots=[...g.querySelectorAll(".dots i")];
+    const t=g.querySelector(".track"),dots=[...g.querySelectorAll(".dots i")];
     const cur=()=>Math.round(t.scrollLeft/Math.max(1,t.clientWidth));
     const go=d=>t.scrollTo({left:(cur()+d)*t.clientWidth,behavior:"smooth"});
     g.querySelector(".prev")?.addEventListener("click",()=>go(-1));
@@ -566,129 +594,174 @@ function wireGalleries(){
     dots.forEach((d,i)=>d.addEventListener("click",()=>t.scrollTo({left:i*t.clientWidth,behavior:"smooth"})));
   });
 }
-async function uploadPhotos(pid,files){
-  if(!files.length) return;
-  if(!assets||!db){ toast("uploading isn't available right now"); return; }
-  toast(`uploading ${files.length} photo${files.length>1?"s":""}…`);
-  const ids=[...((media[pid]?.ids)||[])];
-  for(const f of files){
-    try{ const r=await assets.upload(f); ids.push(r.id); }catch(err){ toast("couldn't upload "+f.name); }
-  }
-  try{ await db.collection("media").doc(pid).set({ids,updatedAt:Date.now()}); media[pid]={ids}; renderGrid(); toast("photos added"); }
-  catch(err){ toast("couldn't save photos"); }
-}
-let pendingPhoto=null;
-async function removePhoto(pid,i){
-  const ids=[...((media[pid]?.ids)||[])]; const id=ids[i]; if(!id) return;
-  const key=pid+":"+id;
-  if(pendingPhoto!==key){ pendingPhoto=key; toast("click again to remove this photo"); setTimeout(()=>{if(pendingPhoto===key)pendingPhoto=null;},3000); return; }
-  pendingPhoto=null; ids.splice(i,1);
-  try{ await db.collection("media").doc(pid).set({ids,updatedAt:Date.now()}); media[pid]={ids}; renderGrid(); toast("photo removed");
-       try{ await assets.delete(id); }catch(e){} }
-  catch(err){ toast("couldn't remove photo"); }
-}
+function renderAll(){renderTabs();renderGrid();}
 
-function renderAll(){ renderTabs(); renderGrid(); }
-
-/* hero typing */
-const roles = ["ML & data science","IoT predictive maintenance","Flutter & React apps","hackathon builder"];
-(function typeRoles(){
-  const el=$("#role"); let r=0,i=0,del=false;
-  if(matchMedia("(prefers-reduced-motion: reduce)").matches){el.textContent=roles[0];return;}
-  (function tick(){
-    const w=roles[r]; el.textContent=w.slice(0,i);
-    if(!del&&i<w.length){i++;setTimeout(tick,60);}
-    else if(!del){del=true;setTimeout(tick,1600);}
-    else if(i>0){i--;setTimeout(tick,30);}
-    else{del=false;r=(r+1)%roles.length;setTimeout(tick,250);}
-  })();
-})();
-
-/* counters + reveal */
-const io = new IntersectionObserver(es=>es.forEach(e=>{ if(!e.isIntersecting) return;
-  e.target.classList.add("in");
-  e.target.querySelectorAll?.("[data-count]").forEach(n=>{
-    const end=+n.dataset.count, t0=performance.now();
-    (function f(t){const k=Math.min(1,(t-t0)/900);n.textContent=Math.round(end*k);if(k<1)requestAnimationFrame(f);})(t0);
+/* ---------- editable text ---------- */
+const TEXT_SEL=[".kicker",".bio",".stat .n",".stat .l","#about .about p",".tl-item .d",".tl-item h4",".tl-item p","#contact .contact > div:first-child p"];
+function textEls(){const out=[];TEXT_SEL.forEach(sel=>document.querySelectorAll(sel).forEach((el,i)=>{if(!el.querySelector("a,svg")&&el.id!=="statProjects")out.push([sel.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")+"-"+i,el]);}));return out;}
+const CONTACT=["github","email","linkedin","location"];
+function contactEl(k){return [...document.querySelectorAll("#contact .row")].find(r=>r.querySelector(".rk")?.textContent.trim().toLowerCase().endsWith(k))?.lastElementChild;}
+function renderContact(){
+  CONTACT.forEach(k=>{
+    const el=contactEl(k); if(!el) return;
+    const v=content.contact[k]; if(v==null&&!editing) return;
+    const val=v??el.textContent.replace(/\s*↗\s*$/,"").trim();
+    let html=esc(val);
+    if(!editing){
+      if(k==="email"&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)) html=`<a href="mailto:${esc(val)}">${esc(val)}</a>`;
+      else if((k==="linkedin"||k==="github")&&val){const u=/^https?:\/\//.test(val)?val:"https://"+val; html=`<a href="${esc(u)}">${esc(val.replace(/^https?:\/\//,""))} ↗</a>`;}
+    }
+    const span=document.createElement("span"); span.className=el.className; span.dataset.contact=k; span.innerHTML=html;
+    el.replaceWith(span);
   });
-  io.unobserve(e.target);}),{threshold:.12});
-window.__io = io;
-document.querySelectorAll(".rv").forEach(el=>io.observe(el));
+}
+function applyTexts(){
+  textEls().forEach(([k,el])=>{el.dataset.key=k; if(content.texts[k]!=null){el.textContent=content.texts[k]; delete el.dataset.count;}});
+  renderContact();
+}
+function setEditable(on){
+  document.querySelectorAll("[data-key],[data-contact]").forEach(el=>{
+    if(on){el.setAttribute("contenteditable","plaintext-only"); if(el.contentEditable!=="plaintext-only") el.setAttribute("contenteditable","true");}
+    else el.removeAttribute("contenteditable");
+  });
+}
+function collectTexts(){
+  document.querySelectorAll("[data-key]").forEach(el=>{content.texts[el.dataset.key]=el.textContent.trim();});
+  document.querySelectorAll("[data-contact]").forEach(el=>{content.contact[el.dataset.contact]=el.textContent.replace(/\s*↗\s*$/,"").trim();});
+}
 
-/* theme */
+/* ---------- GitHub storage ---------- */
+async function gh(path,opts={}){
+  return fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`,{...opts,headers:{Authorization:`Bearer ${token}`,Accept:"application/vnd.github+json",...(opts.headers||{})}});
+}
+async function getSha(p){const r=await gh(`/contents/${p}?ref=${GH.branch}`);if(r.status===404)return null;if(!r.ok)throw new Error("GitHub said "+r.status);return (await r.json()).sha;}
+async function putFile(p,b64,msg){
+  const sha=await getSha(p);
+  const r=await gh(`/contents/${p}`,{method:"PUT",body:JSON.stringify({message:msg,content:b64,branch:GH.branch,...(sha?{sha}:{})})});
+  if(!r.ok){let m=r.status;try{m=(await r.json()).message||m;}catch(e){}throw new Error(m);}
+}
+const b64text=s=>{const b=new TextEncoder().encode(s);let x="";for(let i=0;i<b.length;i+=0x8000)x+=String.fromCharCode(...b.subarray(i,i+0x8000));return btoa(x);};
+async function imageToB64(file){
+  const bmp=await createImageBitmap(file);const sc=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas");c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));
+  const buf=new Uint8Array(await blob.arrayBuffer());let x="";for(let i=0;i<buf.length;i+=0x8000)x+=String.fromCharCode(...buf.subarray(i,i+0x8000));
+  return {b64:btoa(x),url:URL.createObjectURL(blob)};
+}
+async function saveContent(){
+  collectTexts();
+  const data={texts:content.texts,contact:content.contact,projects:all(),updatedAt:new Date().toISOString()};
+  await putFile("content.json",b64text(JSON.stringify(data,null,2)),"Update portfolio content");
+}
+
+/* ---------- admin ---------- */
+function openLogin(){$("#loginErr").textContent="";$("#login").classList.add("open");setTimeout(()=>$("#tokenIn").focus(),30);}
+$("#adminLink").onclick=e=>{e.preventDefault(); token?enterEdit():openLogin();};
+$("#loginCancel").onclick=()=>$("#login").classList.remove("open");
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault(); const t=$("#tokenIn").value.trim(); if(!t){$("#loginErr").textContent="Paste your GitHub token first.";return;}
+  token=t; $("#loginErr").textContent="Checking…";
+  try{const r=await gh("");const j=await r.json(); if(!r.ok||!j.permissions?.push) throw 0;
+    try{localStorage.setItem("gh_token",t);}catch(e){}
+    $("#login").classList.remove("open"); $("#tokenIn").value=""; enterEdit();
+  }catch(err){token=null;$("#loginErr").textContent="That token can't edit "+GH.owner+"/"+GH.repo+". Check it has Contents: Read and write on this repo.";}
+});
+function enterEdit(){editing=true;document.body.classList.add("editing","owner");applyTexts();setEditable(true);toast("Edit mode on. Click any text to change it.");}
+function exitEdit(){collectTexts();editing=false;document.body.classList.remove("editing","owner");setEditable(false);renderContact();}
+$("#edSave").onclick=async()=>{const b=$("#edSave");b.disabled=true;b.textContent="saving…";
+  try{await saveContent();toast("Saved! Live for everyone in about a minute.");}catch(err){toast("Couldn't save: "+err.message);}
+  finally{b.disabled=false;b.textContent="save changes";}};
+$("#edExit").onclick=()=>{exitEdit();toast("Edit mode off. Unsaved text changes are kept until you reload.");};
+$("#edLogout").onclick=()=>{try{localStorage.removeItem("gh_token");}catch(e){} token=null; exitEdit(); toast("Logged out");};
+$("#edAdd").onclick=()=>openModal(null);
+
+/* ---------- hero typing ---------- */
+const roles=["ML & data science","IoT predictive maintenance","Flutter & React apps","hackathon builder"];
+(function(){const el=$("#role");let r=0,i=0,del=false;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){el.textContent=roles[0];return;}
+  (function tick(){const w=roles[r];el.textContent=w.slice(0,i);
+    if(!del&&i<w.length){i++;setTimeout(tick,60);}else if(!del){del=true;setTimeout(tick,1600);}
+    else if(i>0){i--;setTimeout(tick,30);}else{del=false;r=(r+1)%roles.length;setTimeout(tick,250);}})();})();
+
+/* ---------- reveal + counters ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;e.target.classList.add("in");
+  e.target.querySelectorAll?.("[data-count]").forEach(n=>{const end=+n.dataset.count,t0=performance.now();
+    (function f(t){const k=Math.min(1,(t-t0)/900);n.textContent=Math.round(end*k);if(k<1)requestAnimationFrame(f);})(t0);});
+  io.unobserve(e.target);}),{threshold:.12});
+window.__io=io;
+
+/* ---------- theme ---------- */
 const ICON_MOON='<svg viewBox="0 0 16 16"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const ICON_SUN='<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 function setTheme(t){document.documentElement.dataset.theme=t;$("#theme").innerHTML=t==="dark"?ICON_SUN:ICON_MOON;try{localStorage.setItem("theme",t);}catch(e){}}
-(function(){let t=null;try{t=localStorage.getItem("theme");}catch(e){}
-  if(!t) t = "light"; setTheme(t);})();
+(function(){let t=null;try{t=localStorage.getItem("theme");}catch(e){}setTheme(t||"light");})();
 $("#theme").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
 $("#yr").textContent=new Date().getFullYear();
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),3000);}
 
-/* toast */
-function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2400);}
-
-/* modal */
-function fillCatSelect(){ $("#catSel").innerHTML = cats().map(c=>`<option>${esc(c)}</option>`).join("")+`<option value="__new">+ new category…</option>`; }
+/* ---------- project modal (add + edit) ---------- */
+let editingId=null;
+function fillCatSelect(){$("#catSel").innerHTML=cats().map(c=>`<option>${esc(c)}</option>`).join("")+`<option value="__new">+ new category…</option>`;}
 $("#catSel").onchange=e=>$("#newCatWrap").style.display=e.target.value==="__new"?"grid":"none";
-function openModal(){ fillCatSelect(); $("#newCatWrap").style.display="none"; $("#formErr").textContent=""; $("#modal").classList.add("open"); setTimeout(()=>$("#addForm").title.focus(),30); }
-function closeModal(){ $("#modal").classList.remove("open"); $("#addForm").reset(); }
-$("#fab").onclick=openModal; $("#cancel").onclick=closeModal;
+function openModal(id){
+  editingId=id; fillCatSelect(); const f=$("#addForm"); f.reset(); $("#newCatWrap").style.display="none"; $("#formErr").textContent="";
+  const p=id?all().find(x=>x.id===id):null;
+  $("#mTitle").textContent=p?"edit project":"add a new project ♪";
+  $("#clearWrap").hidden=!(p&&(p.images||[]).length);
+  if(p){["title","ctx","year","desc","impact","repo","live"].forEach(k=>f[k].value=p[k]||"");f.status.value=p.status||"done";f.category.value=p.category;f.tags.value=(p.tags||[]).join(", ");}
+  $("#modal").classList.add("open");setTimeout(()=>f.title.focus(),30);
+}
+function closeModal(){$("#modal").classList.remove("open");$("#addForm").reset();}
+$("#fab").onclick=()=>openModal(null);$("#cancel").onclick=closeModal;
 $("#modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
-
-$("#addForm").addEventListener("submit", async e=>{
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();$("#login").classList.remove("open");}});
+$("#addForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const f=e.target, v=n=>(f[n].value||"").trim();
-  let category = v("category")==="__new" ? v("newCat") : v("category");
-  if(!v("title")||!v("desc")||!category){ $("#formErr").textContent="title, category and description are required"; return; }
-  for(const k of ["repo","live"]) if(v(k)&&!safeUrl(v(k))){ $("#formErr").textContent=`${k} link must start with http(s)://`; return; }
-  if(!db){ $("#formErr").textContent="saving isn't available right now. Try reopening the page."; return; }
-  const id = "p"+Date.now().toString(36);
-  const doc = {title:v("title"),category,status:v("status")||"done",ctx:v("ctx"),year:v("year"),desc:v("desc"),impact:v("impact"),
-    tags:v("tags").split(",").map(s=>s.trim()).filter(Boolean).slice(0,10),repo:v("repo"),live:v("live"),createdAt:Date.now()};
-  $("#saveBtn").disabled=true;
-  try{ await db.collection("projects").doc(id).set(doc);
-    const files=[...(f.photos?.files||[])]; if(files.length){ $("#saveBtn").textContent="uploading photos…"; await uploadPhotos(id,files); $("#saveBtn").textContent="save"; }
-    custom = [{...doc,id,_custom:true}, ...custom.filter(p=>p.id!==id)]; renderAll();
-    closeModal(); toast("project added ♪");
-  }catch(err){ $("#formErr").textContent="couldn't save: "+(err?.message||"permission denied"); }
-  finally{ $("#saveBtn").disabled=false; }
+  if(!token){$("#formErr").textContent="Log in as admin first.";return;}
+  const f=e.target,v=n=>(f[n].value||"").trim();
+  const category=v("category")==="__new"?v("newCat"):v("category");
+  if(!v("title")||!v("desc")||!category){$("#formErr").textContent="title, category and description are required";return;}
+  for(const k of ["repo","live"]) if(v(k)&&!safeUrl(v(k))){$("#formErr").textContent=`${k} link must start with http(s)://`;return;}
+  const list=[...all()]; const old=editingId?list.find(p=>p.id===editingId):null;
+  const id=old?old.id:"p"+Date.now().toString(36);
+  let images=old&&!f.clearPhotos.checked?[...(old.images||[])]:[];
+  const btn=$("#saveBtn");btn.disabled=true;
+  try{
+    const files=[...(f.photos.files||[])];
+    for(let i=0;i<files.length;i++){
+      btn.textContent=`uploading photo ${i+1}/${files.length}…`;
+      const {b64,url}=await imageToB64(files[i]); const path=`images/${id}-${Date.now().toString(36)}-${i}.jpg`;
+      await putFile(path,b64,`Add photo for ${v("title")}`); previews[path]=url; images.push(path);
+    }
+    const doc={id,title:v("title"),category,status:v("status")||"done",ctx:v("ctx"),year:v("year"),desc:v("desc"),impact:v("impact"),
+      tags:v("tags").split(",").map(s=>s.trim()).filter(Boolean).slice(0,12),repo:v("repo"),live:v("live"),images};
+    content.projects=old?list.map(p=>p.id===id?doc:p):[doc,...list];
+    btn.textContent="saving…"; await saveContent();
+    renderAll(); closeModal(); toast(old?"Project updated ♪":"Project added ♪ Live in about a minute.");
+  }catch(err){$("#formErr").textContent="Couldn't save: "+err.message;}
+  finally{btn.disabled=false;btn.textContent="save";}
 });
-
-/* delete: two-click confirm (no browser dialogs) */
 let pendingDel=null;
 async function removeProject(id){
-  if(pendingDel!==id){ pendingDel=id; toast("click ✕ again to remove"); setTimeout(()=>{if(pendingDel===id)pendingDel=null;},3000); return; }
-  pendingDel=null;
-  try{ await db.collection("projects").doc(id).delete(); custom=custom.filter(p=>p.id!==id); renderAll(); toast("removed"); }
-  catch(err){ toast("couldn't remove: "+(err?.message||"error")); }
+  if(pendingDel!==id){pendingDel=id;toast("Click delete again to remove this project");setTimeout(()=>{if(pendingDel===id)pendingDel=null;},3000);return;}
+  pendingDel=null; const prev=content.projects; content.projects=all().filter(p=>p.id!==id); renderAll();
+  try{await saveContent();toast("Project removed");}catch(err){content.projects=prev;renderAll();toast("Couldn't remove: "+err.message);}
 }
 
-/* data from artifact db */
-function readDocs(snap){
-  const arr = snap?.docs || (Array.isArray(snap)?snap:[]);
-  return arr.map(d=>{ const data = typeof d.data==="function" ? d.data() : (d.data||d); return {...data,id:d.id||data.id,_custom:true}; })
-            .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-}
-renderAll();
-(async ()=>{
-  if(!window.claude?.use) return;
+/* ---------- load ---------- */
+(async()=>{
+  try{token=localStorage.getItem("gh_token");}catch(e){}
   try{
-    const user = await claude.use("user");
-    isOwner = !!(user && await user.isOwner());
-    document.body.classList.toggle("owner", isOwner);
+    let data=null;
+    if(token){const r=await gh(`/contents/content.json?ref=${GH.branch}`,{headers:{Accept:"application/vnd.github.raw+json"}});if(r.ok)data=await r.json();}
+    if(!data){const r=await fetch("content.json?v="+Date.now(),{cache:"no-store"});if(r.ok)data=await r.json();}
+    if(data){content.texts=data.texts||{};content.contact=data.contact||{};content.projects=Array.isArray(data.projects)?data.projects:null;}
   }catch(e){}
-  try{ if(isOwner) assets = await claude.use("assets"); }catch(e){}
-  try{
-    db = await claude.use("db");
-    if(!db) return;
-    db.collection("projects").onSnapshot(snap=>{ custom = readDocs(snap); renderAll(); }, ()=>{});
-    db.collection("media").onSnapshot(snap=>{
-      const arr=snap?.docs||(Array.isArray(snap)?snap:[]); const m={};
-      arr.forEach(d=>{const data=typeof d.data==="function"?d.data():(d.data||d); m[d.id||data.id]={ids:Array.isArray(data.ids)?data.ids:[]};});
-      media=m; renderGrid();
-    }, ()=>{});
-  }catch(e){}
+  applyTexts(); renderAll();
+  document.querySelectorAll(".rv").forEach(el=>io.observe(el));
+  if(token&&/[?&]admin\b/.test(location.search)) enterEdit();
+  if(!token&&/[?&]admin\b/.test(location.search)) openLogin();
 })();
 </script>
 </body>
